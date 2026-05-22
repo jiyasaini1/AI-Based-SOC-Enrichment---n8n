@@ -1,0 +1,197 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "alert",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "9725aae4-0aa4-4950-ad7a-4486ce3b4888",
+      "name": "Alert",
+      "webhookId": "c1f7b5f3-1d15-4740-a379-12e6c0295276"
+    },
+    {
+      "parameters": {
+        "url": "=https://ipinfo.io/{{$json.ip}}/json",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "ipAddress",
+              "value": "={{$json.ip}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "f144fbd2-90df-4ecf-ba60-7920fd878c4a",
+      "name": "IP Reputation?"
+    },
+    {
+      "parameters": {
+        "url": "=https://www.virustotal.com/api/v3/ip_addresses/{{$json.ip}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-apikey",
+              "value": "YOUR-API-KEY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        416,
+        0
+      ],
+      "id": "760a1c44-ff97-4b0d-95fc-be61b2ab9a3b",
+      "name": "VirusTotal Analysis"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=You are a SOC analyst.\n\nAnalyze this IP intelligence data and provide but create crisp note with max 40 words:\n1. Threat level\n2. Security summary\n3. Recommended actions\n\nData:\n{{ JSON.stringify($json) }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        608,
+        0
+      ],
+      "id": "a4e74dcb-85de-4962-bc31-178b656d95be",
+      "name": "AI Analyst",
+      "credentials": {
+        "openAiApi": {
+          "id": "hsmwgvwom0MRlTjE",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#channelid",
+          "mode": "list",
+          "cachedResultName": "ip-alerts"
+        },
+        "text": "=🚨 SOC ALERT\n\nIP Address:\n{{$node[\"Alert\"].json[\"ip\"]}}\n\nAlert:\n{{$node[\"Alert\"].json[\"alert\"]}}\n\nAI Analysis:\n{{$json.output[0].content[0].text}}\n\nTimestamp:\n{{$now}}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        928,
+        0
+      ],
+      "id": "573b9c2b-6d55-4958-9b61-4f74c1db12de",
+      "name": "Slack Notification",
+      "webhookId": "75d9cfb1-4a01-4d0e-81ed-272601836f31",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "abcd",
+          "name": "slack Credentials"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Alert": [
+      {
+        "json": {
+          "ip": "1.1.1.1",
+          "alert": "Suspicious outbound traffic"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Alert": {
+      "main": [
+        [
+          {
+            "node": "IP Reputation?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IP Reputation?": {
+      "main": [
+        [
+          {
+            "node": "VirusTotal Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "VirusTotal Analysis": {
+      "main": [
+        [
+          {
+            "node": "AI Analyst",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Analyst": {
+      "main": [
+        [
+          {
+            "node": "Slack Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "2c1c79a1-3011-41d7-b716-1c1275924fef",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a60fe58e31bfc1a5b6398105285887485f10894e21fd290312833cbf44fe4623"
+  },
+  "id": "3ujmT7aEmctoGL1r",
+  "tags": []
+}
